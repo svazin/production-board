@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Production Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #161b27;
+    --bg3: #1e2535;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --muted: #7c8398;
+    --accent: #3b82f6;
+    --accent2: #1d4ed8;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.1);
+    --blue-bg: rgba(59,130,246,0.1);
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 0.05em; }
+  .logo span { color: var(--muted); }
+  .date-display { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .sync-status { font-family: var(--mono); font-size: 11px; display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .sync-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  input[type="date"] { background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 12px; padding: 6px 10px; outline: none; }
+  input[type="date"]:focus { border-color: var(--accent); }
+  .btn { font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .btn:hover { background: var(--bg2); border-color: var(--border2); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-sm { font-size: 11px; padding: 5px 10px; }
+
+  /* MAIN */
+  .main { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+
+  /* KPI STRIP */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 20px; }
+  .kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .kpi-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .kpi-val { font-family: var(--mono); font-size: 26px; font-weight: 500; color: var(--text); line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* SECTION */
+  .section { margin-bottom: 24px; }
+  .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
+  .section-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+
+  /* SHIFT TABS */
+  .shift-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .tab { font-family: var(--mono); font-size: 11px; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; }
+  .tab:hover { border-color: var(--border2); color: var(--text); }
+  .tab.active { background: var(--blue-bg); border-color: var(--accent); color: var(--accent); }
+
+  /* TABLE */
+  .tbl-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+  thead th { background: var(--bg2); color: var(--muted); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  td[contenteditable="true"] { cursor: text; border-radius: 4px; transition: background .1s; }
+  td[contenteditable="true"]:hover { background: var(--bg3); }
+  td[contenteditable="true"]:focus { outline: 1px solid var(--accent); background: rgba(59,130,246,0.08); outline-offset: -1px; }
+  .num { text-align: right; font-family: var(--mono); }
+  .scrap-val { color: var(--red); font-family: var(--mono); }
+
+  /* BAR */
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar-track { height: 6px; background: var(--bg3); border-radius: 6px; overflow: hidden; width: 70px; flex-shrink: 0; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width .3s; }
+  .bar-pct { font-family: var(--mono); font-size: 11px; color: var(--muted); min-width: 32px; }
+
+  /* PILLS */
+  .pill { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+  .pill-green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .pill-red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .pill-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .pill-blue { background: var(--blue-bg); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); }
+
+  /* STATUS SELECT */
+  .status-select { font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg3); color: var(--text); padding: 3px 6px; outline: none; cursor: pointer; }
+  .status-select:focus { border-color: var(--accent); }
+
+  /* INVENTORY */
+  .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .inv-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .inv-card.low { border-color: rgba(239,68,68,0.3); }
+  .inv-name { font-size: 12px; font-weight: 500; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .inv-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .inv-val { color: var(--text); font-family: var(--mono); cursor: text; border-radius: 3px; padding: 0 2px; }
+  .inv-val:hover { background: var(--bg3); }
+  .inv-val:focus { outline: 1px solid var(--accent); background: rgba(59,130,246,0.08); outline-offset: 1px; }
+  .inv-bar { height: 5px; background: var(--bg3); border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  .inv-fill { height: 100%; border-radius: 5px; transition: width .3s; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 16px; font-size: 12px; font-family: var(--mono); color: var(--text); opacity: 0; transform: translateY(8px); transition: all .2s; z-index: 999; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-color: rgba(34,197,94,0.4); color: var(--green); }
+  .toast.error { border-color: rgba(239,68,68,0.4); color: var(--red); }
+
+  /* LOADING */
+  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--muted); font-family: var(--mono); font-size: 12px; gap: 10px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* AUTO REFRESH BADGE */
+  .refresh-badge { font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .main { padding: 12px; }
+    .header { padding: 10px 12px; }
+    .kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .kpi-val { font-size: 20px; }
+  }
+  @media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">PROD<span>.</span>BOARD</div>
+      <div class="date-display" id="today-display"></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="sync-status">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">Connecting...</span>
+    </div>
+    <div class="refresh-badge">Auto-refresh: 30s</div>
+    <input type="date" id="date-pick">
+    <button class="btn btn-sm" onclick="loadAll()">Load date</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Total GL units</div>
+      <div class="kpi-val" id="kpi-gl">—</div>
+      <div class="kpi-sub">all shifts today</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Scrap rate</div>
+      <div class="kpi-val" id="kpi-scrap">—</div>
+      <div class="kpi-sub" id="kpi-scrap-sub">gross vs GL</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Order fulfillment</div>
+      <div class="kpi-val" id="kpi-fulfill">—</div>
+      <div class="kpi-sub" id="kpi-fulfill-sub">units vs target</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Material consumed</div>
+      <div class="kpi-val" id="kpi-mat">—</div>
+      <div class="kpi-sub">all materials (lb)</div>
+    </div>
+  </div>
+
+  <!-- PRODUCTION LOG -->
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">Shift Production Log</div>
+      <button class="btn btn-sm btn-primary" onclick="addPressRow()">+ Add press</button>
+    </div>
+    <div class="shift-tabs">
+      <button class="tab active" onclick="setShift(this,'D')">Day</button>
+      <button class="tab" onclick="setShift(this,'E')">Evening</button>
+      <button class="tab" onclick="setShift(this,'N')">Night</button>
+    </div>
+    <div class="tbl-wrap" id="prod-wrap">
+      <div class="loading"><div class="spinner"></div>Loading...</div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">Open Orders</div>
+      <button class="btn btn-sm btn-primary" onclick="addOrderRow()">+ Add order</button>
+    </div>
+    <div class="tbl-wrap" id="order-wrap">
+      <div class="loading"><div class="spinner"></div>Loading...</div>
+    </div>
+  </div>
+
+  <!-- INVENTORY -->
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">Material Inventory</div>
+      <button class="btn btn-sm btn-primary" onclick="addInvCard()">+ Add material</button>
+    </div>
+    <div class="inv-grid" id="inv-grid">
+      <div class="loading" style="grid-column:1/-1"><div class="spinner"></div>Loading...</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://blmcoxrgomnunarmiggd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsbWNveHJnb21udW5hcm1pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MDUwNDQsImV4cCI6MjA5MDQ4MTA0NH0.XZTVngbpvJ_LQ1KyYnO_Ty6-gZAqCAG8_IRHr3SX_7o';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const today = new Date();
+document.getElementById('today-display').textContent = today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+document.getElementById('date-pick').value = today.toISOString().slice(0,10);
+
+let currentShift = 'D';
+let prodRows = [], orderRows = [], invRows = [];
+let refreshTimer;
+
+// TOAST
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = 'toast', 2500);
+}
+
+// SYNC STATUS
+function setSynced(ok) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (ok) { dot.className = 'sync-dot live'; lbl.textContent = 'Live'; }
+  else { dot.className = 'sync-dot'; lbl.textContent = 'Offline'; }
+}
+
+// HELPERS
+function barColor(pct) { return pct >= 90 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#ef4444'; }
+function renderBar(pct) {
+  const p = Math.min(pct, 100);
+  return `<div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${barColor(pct)}"></div></div><span class="bar-pct">${Math.round(pct)}%</span></div>`;
+}
+function glCalc(r) { return Math.max(0, (r.gross_units||0) - (r.scrap||0)); }
+function targetForRow(r) { return Math.round((8*3600/(r.cycle_time||1)) * (r.cavitation||1)); }
+function getDate() { return document.getElementById('date-pick').value; }
+
+// UPDATE KPIs
+function updateKPIs() {
+  const totalGross = prodRows.reduce((s,r) => s + (r.gross_units||0), 0);
+  const totalGL = prodRows.reduce((s,r) => s + glCalc(r), 0);
+  const totalMat = prodRows.reduce((s,r) => s + (r.consumed_lb||0), 0);
+  const scrapPct = totalGross > 0 ? Math.round((totalGross - totalGL) / totalGross * 100) : 0;
+  const totalOrdered = orderRows.reduce((s,o) => s + (o.qty_ordered||0), 0);
+  const totalProd = orderRows.reduce((s,o) => s + (o.produced||0), 0);
+  const fp = totalOrdered > 0 ? Math.round(totalProd / totalOrdered * 100) : 0;
+
+  document.getElementById('kpi-gl').textContent = totalGL.toLocaleString();
+  const scrapEl = document.getElementById('kpi-scrap');
+  scrapEl.textContent = scrapPct + '%';
+  scrapEl.style.color = scrapPct > 5 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('kpi-mat').textContent = totalMat.toFixed(1);
+  const fEl = document.getElementById('kpi-fulfill');
+  fEl.textContent = fp + '%';
+  fEl.style.color = fp >= 80 ? 'var(--green)' : fp >= 50 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById('kpi-fulfill-sub').textContent = totalProd.toLocaleString() + ' / ' + totalOrdered.toLocaleString() + ' units';
+}
+
+// RENDER PRODUCTION TABLE
+function renderProd() {
+  const shiftRows = prodRows.filter(r => r.shift === currentShift);
+  const wrap = document.getElementById('prod-wrap');
+  if (!shiftRows.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px">No rows for this shift — click "+ Add press" to start logging.</div>`;
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Press #</th><th>Mold / Part</th><th>Cav.</th><th>Cycle (s)</th>
+    <th>Shots</th><th>Gross</th><th>Scrap</th><th>GL units</th>
+    <th>Target</th><th>vs Target</th><th>Material</th><th>Consumed (lb)</th><th>Status</th><th></th>
+  </tr></thead><tbody>`;
+  shiftRows.forEach(r => {
+    const gl = glCalc(r);
+    const target = targetForRow(r);
+    const pct = target > 0 ? Math.round(gl / target * 100) : 0;
+    const idx = prodRows.indexOf(r);
+    html += `<tr data-id="${r.id}">
+      <td contenteditable="true" onblur="updateProdField(${idx},'press',this.textContent)">${r.press||''}</td>
+      <td contenteditable="true" onblur="updateProdField(${idx},'mold',this.textContent)">${r.mold||''}</td>
+      <td class="num" contenteditable="true" onblur="updateProdFieldNum(${idx},'cavitation',this.textContent)">${r.cavitation||''}</td>
+      <td class="num" contenteditable="true" onblur="updateProdFieldNum(${idx},'cycle_time',this.textContent)">${r.cycle_time||''}</td>
+      <td class="num" contenteditable="true" onblur="updateProdFieldNum(${idx},'shots',this.textContent)">${r.shots||0}</td>
+      <td class="num" contenteditable="true" onblur="updateProdFieldNum(${idx},'gross_units',this.textContent)">${(r.gross_units||0).toLocaleString()}</td>
+      <td class="num scrap-val" contenteditable="true" onblur="updateProdFieldNum(${idx},'scrap',this.textContent)">${r.scrap||0}</td>
+      <td class="num" style="font-weight:500">${gl.toLocaleString()}</td>
+      <td class="num" style="color:var(--muted)">${target.toLocaleString()}</td>
+      <td>${renderBar(pct)}</td>
+      <td contenteditable="true" onblur="updateProdField(${idx},'material',this.textContent)">${r.material||''}</td>
+      <td class="num" contenteditable="true" onblur="updateProdFieldNum(${idx},'consumed_lb',this.textContent)">${r.consumed_lb||0}</td>
+      <td><select class="status-select" onchange="updateProdField(${idx},'status',this.value)">
+        <option ${r.status==='Running'?'selected':''}>Running</option>
+        <option ${r.status==='Down'?'selected':''}>Down</option>
+        <option ${r.status==='Maint.'?'selected':''}>Maint.</option>
+        <option ${r.status==='Setup'?'selected':''}>Setup</option>
+      </select></td>
+      <td><button class="btn btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.2)" onclick="deleteProd('${r.id}')">✕</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  updateKPIs();
+}
+
+// RENDER ORDERS
+function renderOrders() {
+  const wrap = document.getElementById('order-wrap');
+  if (!orderRows.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px">No open orders — click "+ Add order" to add one.</div>`;
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Order #</th><th>Part / Mold</th><th>Qty ordered</th><th>Produced</th>
+    <th>Fulfillment</th><th>Due date</th><th>Priority</th><th>Notes</th><th></th>
+  </tr></thead><tbody>`;
+  orderRows.forEach((o,i) => {
+    const pct = o.qty_ordered > 0 ? Math.round(o.produced / o.qty_ordered * 100) : 0;
+    const priPill = o.priority==='High'?'pill-red':o.priority==='Med'?'pill-amber':'pill-blue';
+    html += `<tr>
+      <td style="font-family:var(--mono)" contenteditable="true" onblur="updateOrderField(${i},'order_num',this.textContent)">${o.order_num||''}</td>
+      <td contenteditable="true" onblur="updateOrderField(${i},'part',this.textContent)">${o.part||''}</td>
+      <td class="num" contenteditable="true" onblur="updateOrderFieldNum(${i},'qty_ordered',this.textContent)">${(o.qty_ordered||0).toLocaleString()}</td>
+      <td class="num" contenteditable="true" onblur="updateOrderFieldNum(${i},'produced',this.textContent)">${(o.produced||0).toLocaleString()}</td>
+      <td>${renderBar(pct)}</td>
+      <td style="font-family:var(--mono);font-size:11px" contenteditable="true" onblur="updateOrderField(${i},'due_date',this.textContent)">${o.due_date||''}</td>
+      <td><select class="status-select" onchange="updateOrderField(${i},'priority',this.value)">
+        <option ${o.priority==='High'?'selected':''}>High</option>
+        <option ${o.priority==='Med'?'selected':''}>Med</option>
+        <option ${o.priority==='Low'?'selected':''}>Low</option>
+      </select></td>
+      <td style="color:var(--muted)" contenteditable="true" onblur="updateOrderField(${i},'notes',this.textContent)">${o.notes||''}</td>
+      <td><button class="btn btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.2)" onclick="deleteOrder('${o.id}')">✕</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  updateKPIs();
+}
+
+// RENDER INVENTORY
+function renderInventory() {
+  const grid = document.getElementById('inv-grid');
+  if (!invRows.length) {
+    grid.innerHTML = `<div style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:20px">No materials — click "+ Add material".</div>`;
+    return;
+  }
+  grid.innerHTML = invRows.map((m,i) => {
+    const pct = m.max_lb > 0 ? Math.round(m.current_lb / m.max_lb * 100) : 0;
+    const low = m.current_lb <= m.min_lb;
+    const fillColor = low ? 'var(--red)' : pct < 50 ? 'var(--amber)' : 'var(--green)';
+    return `<div class="inv-card ${low?'low':''}">
+      <div class="inv-name">
+        <span>${m.material_name||'Material'}</span>
+        ${low ? '<span class="pill pill-red">Low</span>' : ''}
+      </div>
+      <div class="inv-row"><span>On hand</span>
+        <span class="inv-val" contenteditable="true" onblur="updateInvField(${i},'current_lb',this.textContent)">${m.current_lb||0} lb</span>
+      </div>
+      <div class="inv-row"><span>Min / Max</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${m.min_lb||0} / ${m.max_lb||0} lb</span>
+      </div>
+      <div class="inv-bar"><div class="inv-fill" style="width:${Math.min(pct,100)}%;background:${fillColor}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// LOAD ALL DATA
+async function loadAll() {
+  const date = getDate();
+  try {
+    const [prodRes, orderRes, invRes] = await Promise.all([
+      sb.from('production_logs').select('*').eq('log_date', date).order('created_at'),
+      sb.from('orders').select('*').order('created_at'),
+      sb.from('inventory').select('*').order('material_name')
+    ]);
+    if (prodRes.error || orderRes.error || invRes.error) throw new Error('Load failed');
+    prodRows = prodRes.data || [];
+    orderRows = orderRes.data || [];
+    invRows = invRes.data || [];
+    renderProd();
+    renderOrders();
+    renderInventory();
+    updateKPIs();
+    setSynced(true);
+  } catch(e) {
+    setSynced(false);
+    toast('Connection error — check your network', 'error');
+  }
+}
+
+// PROD FIELD UPDATES
+async function updateProdField(idx, field, val) {
+  const row = prodRows[idx];
+  if (!row) return;
+  row[field] = val.trim();
+  const { error } = await sb.from('production_logs').update({[field]: val.trim()}).eq('id', row.id);
+  if (error) toast('Save failed', 'error'); else toast('Saved');
+  updateKPIs();
+}
+async function updateProdFieldNum(idx, field, val) {
+  const row = prodRows[idx];
+  if (!row) return;
+  const num = parseFloat(val.replace(/,/g,'')) || 0;
+  row[field] = num;
+  const { error } = await sb.from('production_logs').update({[field]: num}).eq('id', row.id);
+  if (error) toast('Save failed', 'error'); else toast('Saved');
+  renderProd();
+}
+
+// ORDER FIELD UPDATES
+async function updateOrderField(idx, field, val) {
+  const row = orderRows[idx];
+  if (!row) return;
+  row[field] = val.trim();
+  const { error } = await sb.from('orders').update({[field]: val.trim()}).eq('id', row.id);
+  if (error) toast('Save failed', 'error'); else toast('Saved');
+  updateKPIs();
+}
+async function updateOrderFieldNum(idx, field, val) {
+  const row = orderRows[idx];
+  if (!row) return;
+  const num = parseInt(val.replace(/,/g,'')) || 0;
+  row[field] = num;
+  const { error } = await sb.from('orders').update({[field]: num}).eq('id', row.id);
+  if (error) toast('Save failed', 'error'); else toast('Saved');
+  renderOrders();
+}
+
+// INV FIELD UPDATES
+async function updateInvField(idx, field, val) {
+  const row = invRows[idx];
+  if (!row) return;
+  const num = parseFloat(val.replace(/[^0-9.]/g,'')) || 0;
+  row[field] = num;
+  const { error } = await sb.from('inventory').update({[field]: num, updated_at: new Date().toISOString()}).eq('id', row.id);
+  if (error) toast('Save failed', 'error'); else toast('Saved');
+  renderInventory();
+}
+
+// ADD ROWS
+async function addPressRow() {
+  const date = getDate();
+  const { data, error } = await sb.from('production_logs').insert({
+    log_date: date, shift: currentShift, press: 'Press ' + (prodRows.filter(r=>r.shift===currentShift).length+1),
+    mold: '', cavitation: 4, cycle_time: 20, shots: 0, gross_units: 0, scrap: 0,
+    material: '', consumed_lb: 0, status: 'Running'
+  }).select().single();
+  if (error) { toast('Add failed', 'error'); return; }
+  prodRows.push(data);
+  renderProd();
+  toast('Press row added');
+}
+
+async function addOrderRow() {
+  const { data, error } = await sb.from('orders').insert({
+    order_num: 'ORD-', part: '', qty_ordered: 0, produced: 0,
+    due_date: null, priority: 'Med', notes: ''
+  }).select().single();
+  if (error) { toast('Add failed', 'error'); return; }
+  orderRows.push(data);
+  renderOrders();
+  toast('Order added');
+}
+
+async function addInvCard() {
+  const { data, error } = await sb.from('inventory').insert({
+    material_name: 'New Material', current_lb: 0, min_lb: 100, max_lb: 1000
+  }).select().single();
+  if (error) { toast('Add failed — name must be unique', 'error'); return; }
+  invRows.push(data);
+  renderInventory();
+  toast('Material added');
+}
+
+// DELETE
+async function deleteProd(id) {
+  if (!confirm('Remove this press row?')) return;
+  await sb.from('production_logs').delete().eq('id', id);
+  prodRows = prodRows.filter(r => r.id !== id);
+  renderProd();
+  toast('Row removed');
+}
+async function deleteOrder(id) {
+  if (!confirm('Remove this order?')) return;
+  await sb.from('orders').delete().eq('id', id);
+  orderRows = orderRows.filter(o => o.id !== id);
+  renderOrders();
+  toast('Order removed');
+}
+
+// SHIFT
+function setShift(btn, shift) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentShift = shift;
+  renderProd();
+}
+
+// AUTO REFRESH
+function startRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(loadAll, 30000);
+}
+
+// INIT
+loadAll();
+startRefresh();
+</script>
+</body>
+</html>
