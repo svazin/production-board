@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InjectionOS — Production Management</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c0f;
+  --bg2: #111418;
+  --bg3: #181c22;
+  --border: #1e2530;
+  --border2: #252d3a;
+  --text: #c8d4e0;
+  --text2: #6b7f94;
+  --text3: #3d4f60;
+  --accent: #00d4ff;
+  --accent2: #0099bb;
+  --green: #00e676;
+  --green2: #00a854;
+  --yellow: #ffd740;
+  --orange: #ff8c42;
+  --red: #ff4d4d;
+  --purple: #b388ff;
+  --white: #e8f0f8;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --cond: 'IBM Plex Sans Condensed', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border2);
+  height: 48px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  border-right: 1px solid var(--border2);
+  height: 100%;
+}
+
+.logo-icon {
+  width: 26px; height: 26px;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-family: var(--cond);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--white);
+}
+
+.logo-text span { color: var(--accent); }
+
+.nav {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.nav-btn:hover { color: var(--text); background: var(--bg3); }
+.nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,212,255,0.04); }
+
+.nav-btn svg { flex-shrink: 0; }
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  margin-left: auto;
+  border-left: 1px solid var(--border2);
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.live-dot {
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.topbar-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.shift-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background: rgba(0,212,255,0.1);
+  color: var(--accent);
+  border: 1px solid rgba(0,212,255,0.2);
+  letter-spacing: 0.06em;
+}
+
+/* ── LAYOUT ── */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.page {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.page.active { display: flex; }
+
+/* ── SCROLLABLE CONTENT ── */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.page-content::-webkit-scrollbar { width: 5px; }
+.page-content::-webkit-scrollbar-track { background: transparent; }
+.page-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── GRID LAYOUTS ── */
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.01);
+}
+
+.card-title {
+  font-family: var(--cond);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text2);
+  text-transform: uppercase;
+}
+
+.card-body { padding: 14px; }
+
+/* ── KPI CARDS ── */
+.kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.kpi-card.green::before { background: var(--green); }
+.kpi-card.yellow::before { background: var(--yellow); }
+.kpi-card.red::before { background: var(--red); }
+.kpi-card.blue::before { background: var(--accent); }
+.kpi-card.orange::before { background: var(--orange); }
+.kpi-card.purple::before { background: var(--purple); }
+
+.kpi-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.kpi-value {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.kpi-sub {
+  font-size: 11px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kpi-delta {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.kpi-delta.up { color: var(--green); background: rgba(0,230,118,0.1); }
+.kpi-delta.down { color: var(--red); background: rgba(255,77,77,0.1); }
+.kpi-delta.neutral { color: var(--text2); background: rgba(255,255,255,0.05); }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  font-family: var(--cond);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--white);
+  text-transform: uppercase;
+}
+
+.section-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 3px;
+  border: none;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-primary { background: var(--accent); color: var(--bg); }
+.btn-primary:hover { background: #33dcff; }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+.btn-ghost:hover { color: var(--text); border-color: var(--text3); }
+.btn-green { background: var(--green2); color: var(--bg); }
+.btn-green:hover { background: var(--green); }
+.btn-red { background: rgba(255,77,77,0.15); color: var(--red); border: 1px solid rgba(255,77,77,0.3); }
+.btn-red:hover { background: rgba(255,77,77,0.25); }
+.btn-yellow { background: rgba(255,215,64,0.12); color: var(--yellow); border: 1px solid rgba(255,215,64,0.25); }
+
+.btn-sm { padding: 4px 8px; font-size: 10px; }
+.btn-icon { padding: 6px 8px; }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+}
+
+.badge-green { background: rgba(0,230,118,0.12); color: var(--green); border: 1px solid rgba(0,230,118,0.2); }
+.badge-yellow { background: rgba(255,215,64,0.12); color: var(--yellow); border: 1px solid rgba(255,215,64,0.2); }
+.badge-red { background: rgba(255,77,77,0.12); color: var(--red); border: 1px solid rgba(255,77,77,0.2); }
+.badge-blue { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+.badge-orange { background: rgba(255,140,66,0.12); color: var(--orange); border: 1px solid rgba(255,140,66,0.2); }
+.badge-gray { background: rgba(255,255,255,0.05); color: var(--text2); border: 1px solid var(--border2); }
+.badge-purple { background: rgba(179,136,255,0.12); color: var(--purple); border: 1px solid rgba(179,136,255,0.2); }
+
+/* ── STATUS DOT ── */
+.sdot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sdot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.sdot-yellow { background: var(--yellow); }
+.sdot-red { background: var(--red); box-shadow: 0 0 6px var(--red); animation: pulse 1.5s infinite; }
+.sdot-gray { background: var(--text3); }
+.sdot-orange { background: var(--orange); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+.mono { font-family: var(--mono); font-size: 11px; }
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.progress-fill.green { background: var(--green); }
+.progress-fill.yellow { background: var(--yellow); }
+.progress-fill.red { background: var(--red); }
+.progress-fill.blue { background: var(--accent); }
+.progress-fill.orange { background: var(--orange); }
+
+/* ── MACHINE GRID ── */
+.machine-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.machine-tile {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.machine-tile:hover { border-color: var(--border2); background: rgba(255,255,255,0.03); }
+.machine-tile.running { border-color: rgba(0,230,118,0.3); }
+.machine-tile.running::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--green);
+}
+
+.machine-tile.down { border-color: rgba(255,77,77,0.3); opacity: 0.7; }
+.machine-tile.down::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--red);
+}
+
+.machine-tile.setup::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--yellow);
+}
+
+.machine-tile.idle::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--text3);
+}
+
+.machine-id {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  margin-bottom: 4px;
+}
+
+.machine-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.machine-part {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text2);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.machine-oee {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.machine-efficiency {
+  font-size: 9px;
+  color: var(--text3);
+}
+
+/* ── SPARKLINE ── */
+.sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 24px;
+}
+
+.spark-bar {
+  flex: 1;
+  border-radius: 1px;
+  min-width: 3px;
+}
+
+/* ── FORM ELEMENTS ── */
+.form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+.form-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.form-label { font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: 0.08em; text-transform: uppercase; }
+
+input, select, textarea {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+select option { background: var(--bg3); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  width: 600px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-family: var(--cond);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── GANTT ── */
+.gantt-container {
+  overflow-x: auto;
+}
+
+.gantt-header {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.gantt-label-col {
+  width: 160px;
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  padding: 4px 8px;
+}
+
+.gantt-time-cols {
+  flex: 1;
+  display: flex;
+}
+
+.gantt-hour {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  text-align: center;
+  padding: 4px 2px;
+  border-left: 1px solid var(--border);
+}
+
+.gantt-row {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.gantt-row:hover { background: rgba(255,255,255,0.02); }
+
+.gantt-row-label {
+  width: 160px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--mono);
+  border-right: 1px solid var(--border);
+}
+
+.gantt-track {
+  flex: 1;
+  height: 100%;
+  position: relative;
+}
+
+.gantt-block {
+  position: absolute;
+  top: 4px;
+  height: 24px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+/* ── ALERT STRIP ── */
+.alert-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(255,77,77,0.07);
+  border: 1px solid rgba(255,77,77,0.2);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--red);
+  margin-bottom: 12px;
+}
+
+.alert-strip.warning {
+  background: rgba(255,215,64,0.07);
+  border-color: rgba(255,215,64,0.2);
+  color: var(--yellow);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 260px;
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* ── CHART PLACEHOLDER ── */
+.chart-area {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── TABS ── */
+.tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── SCROLLABLE TABLES ── */
+.table-scroll { max-height: 320px; overflow-y: auto; }
+.table-scroll::-webkit-scrollbar { width: 4px; }
+.table-scroll::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* divider */
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+
+/* ── SVG CHARTS ── */
+svg text { font-family: var(--mono); }
+
+/* ── NOTIFICATION TOAST ── */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  animation: slideIn 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.toast.success { border-left: 3px solid var(--green); }
+.toast.warning { border-left: 3px solid var(--yellow); }
+.toast.error { border-left: 3px solid var(--red); }
+
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ── OEE GAUGE ── */
+.oee-gauge {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Collapse sections */
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapse-arrow { transition: transform 0.2s; }
+.collapse-arrow.open { transform: rotate(180deg); }
+
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <div class="logo-text">Injection<span>OS</span></div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="navigate('dashboard')" data-page="dashboard">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-btn" onclick="navigate('machines')" data-page="machines">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8.5" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      Machine Floor
+    </button>
+    <button class="nav-btn" onclick="navigate('schedule')" data-page="schedule">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 2V4M11 2V4M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Schedule
+    </button>
+    <button class="nav-btn" onclick="navigate('orders')" data-page="orders">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11l-2-1.5L10 14l-2-1.5L6 14l-2-1.5L2 14V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Production Orders
+    </button>
+    <button class="nav-btn" onclick="navigate('materials')" data-page="materials">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v14M2 4.5l6 3.5 6-3.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      Raw Materials
+    </button>
+    <button class="nav-btn" onclick="navigate('bom')" data-page="bom">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="3" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3M8 8l-5 3M8 8l5 3" stroke="currentColor" stroke-width="1.2"/></svg>
+      Bill of Materials
+    </button>
+    <button class="nav-btn" onclick="navigate('quality')" data-page="quality">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8l1.5 1.5L10 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Quality
+    </button>
+    <button class="nav-btn" onclick="navigate('molds')" data-page="molds">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="5" width="12" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M5 5V3.5a1 1 0 011-1h4a1 1 0 011 1V5" stroke="currentColor" stroke-width="1.5"/><path d="M8 9v0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Mold Tracking
+    </button>
+    <button class="nav-btn" onclick="navigate('maintenance')" data-page="maintenance">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13 7.5a5.5 5.5 0 11-11 0 5.5 5.5 0 0111 0z" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 5l-2.5 2.5M7.5 8L9 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 11l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Maintenance
+    </button>
+  </nav>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+    <div class="shift-badge" id="shift-label">SHIFT 1</div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ═══════════════════════════════════════════ DASHBOARD ══ -->
+<div class="page active" id="page-dashboard">
+<div class="page-content">
+
+  <div class="alert-strip warning" style="margin-bottom:12px;">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2L14.5 13H1.5L8 2Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 6v3M8 11v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    LOW STOCK: VERSAFLEX 2810 at 12% — Reorder required | Press #14 offline — Fault: Clamp pressure loss
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="kpi-card green">
+      <div class="kpi-label">Presses Running</div>
+      <div class="kpi-value">26<span style="font-size:14px;color:var(--text2)">/30</span></div>
+      <div class="kpi-sub"><span class="kpi-delta up">+2</span> vs. yesterday</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Shift OEE</div>
+      <div class="kpi-value">78<span style="font-size:14px;color:var(--text2)">%</span></div>
+      <div class="kpi-sub"><span class="kpi-delta up">+3.2%</span> vs. last shift</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Parts / Hour</div>
+      <div class="kpi-value">4,218</div>
+      <div class="kpi-sub"><span class="kpi-delta neutral">±0.4%</span> target: 4,200</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Open Alarms</div>
+      <div class="kpi-value">7</div>
+      <div class="kpi-sub"><span class="kpi-delta down">+3</span> new this shift</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Scrap Rate</div>
+      <div class="kpi-value">1.8<span style="font-size:14px;color:var(--text2)">%</span></div>
+      <div class="kpi-sub"><span class="kpi-delta up">-0.3%</span> vs. target 2%</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Active Orders</div>
+      <div class="kpi-value">18</div>
+      <div class="kpi-sub">3 completing today</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Resin Used Today</div>
+      <div class="kpi-value">6.2<span style="font-size:14px;color:var(--text2)">klb</span></div>
+      <div class="kpi-sub">Target: 6.8 klb</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">On-Time Delivery</div>
+      <div class="kpi-value">94<span style="font-size:14px;color:var(--text2)">%</span></div>
+      <div class="kpi-sub"><span class="kpi-delta up">+1%</span> this week</div>
+    </div>
+  </div>
+
+  <div class="grid-2-1" style="margin-bottom:12px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Shift Production vs. Target — Today</div>
+        <div class="badge badge-blue">Live</div>
+      </div>
+      <div class="card-body">
+        <svg width="100%" height="160" id="shift-chart" style="display:block;"></svg>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Machine Status</div></div>
+      <div class="card-body" style="padding:10px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;"><span class="sdot sdot-green"></span><span style="font-size:12px;">Running</span></div>
+            <span class="mono" style="color:var(--green)">26</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;"><span class="sdot sdot-yellow"></span><span style="font-size:12px;">Setup/Changeover</span></div>
+            <span class="mono" style="color:var(--yellow)">2</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;"><span class="sdot sdot-red"></span><span style="font-size:12px;">Down / Fault</span></div>
+            <span class="mono" style="color:var(--red)">1</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;"><span class="sdot sdot-gray"></span><span style="font-size:12px;">Idle / PM</span></div>
+            <span class="mono" style="color:var(--text2)">1</span>
+          </div>
+          <div style="margin-top:6px;padding-top:10px;border-top:1px solid var(--border);">
+            <div class="kpi-label" style="margin-bottom:6px;">Fleet Utilization</div>
+            <div class="progress-bar"><div class="progress-fill blue" style="width:86.6%"></div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;font-family:var(--mono);font-size:10px;color:var(--text2);">
+              <span>86.6%</span><span>Target 90%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2 mb-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Critical Material Levels</div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('materials')">View All</button>
+      </div>
+      <div class="card-body" style="padding:10px 14px;">
+        <div id="material-mini-list"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Active Alarms</div>
+        <span class="badge badge-red">7 Active</span>
+      </div>
+      <div class="card-body" style="padding:6px 0;">
+        <div id="alarm-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Today's Production Orders</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('orders')">All Orders</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('new-order-modal')">+ New Order</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="dashboard-orders-table">
+        <thead>
+          <tr>
+            <th>Order #</th><th>Part</th><th>Machine</th><th>Resin</th><th>Qty Target</th><th>Completed</th><th>Progress</th><th>Status</th><th>ETC</th>
+          </tr>
+        </thead>
+        <tbody id="dashboard-orders-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════ MACHINE FLOOR ══ -->
+<div class="page" id="page-machines">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Machine Floor — All Presses</div>
+    <div class="section-actions">
+      <select style="width:140px;" id="machine-filter">
+        <option>All Machines</option>
+        <option>Running</option>
+        <option>Down</option>
+        <option>Setup</option>
+        <option>Idle</option>
+      </select>
+      <button class="btn btn-ghost btn-sm">Export</button>
+    </div>
+  </div>
+
+  <div class="machine-grid" id="machine-grid"></div>
+
+  <div class="grid-2 mt-16">
+    <div class="card">
+      <div class="card-header"><div class="card-title">OEE by Machine (Top 10)</div></div>
+      <div class="card-body">
+        <div id="oee-bars"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Downtime Log — This Shift</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Machine</th><th>Reason</th><th>Duration</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">P-014</td><td>Clamp pressure loss</td><td class="mono">1h 22m</td><td><span class="badge badge-red">Open</span></td></tr>
+            <tr><td class="mono">P-022</td><td>Changeover — mold swap</td><td class="mono">38m</td><td><span class="badge badge-yellow">Setup</span></td></tr>
+            <tr><td class="mono">P-007</td><td>Barrel purge / color change</td><td class="mono">22m</td><td><span class="badge badge-green">Resolved</span></td></tr>
+            <tr><td class="mono">P-019</td><td>E-stop triggered</td><td class="mono">14m</td><td><span class="badge badge-green">Resolved</span></td></tr>
+            <tr><td class="mono">P-003</td><td>PM — scheduled</td><td class="mono">Ongoing</td><td><span class="badge badge-gray">PM</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════ SCHEDULE ══ -->
+<div class="page" id="page-schedule">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Production Schedule</div>
+    <div class="section-actions">
+      <select style="width:120px;">
+        <option>24-Hour View</option>
+        <option>Shift View</option>
+        <option>Week View</option>
+      </select>
+      <button class="btn btn-ghost btn-sm">← Prev</button>
+      <span class="mono" style="font-size:11px;padding:0 8px;" id="schedule-date"></span>
+      <button class="btn btn-ghost btn-sm">Next →</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('new-order-modal')">+ Schedule Run</button>
+    </div>
+  </div>
+
+  <div class="card mb-12">
+    <div class="card-header"><div class="card-title">Gantt — Press Scheduling (Next 24h)</div></div>
+    <div class="card-body" style="padding:8px;">
+      <div class="gantt-container" id="gantt-container"></div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Shift Summary</div></div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div><div class="kpi-label">Shift 1 (06:00–14:00)</div>
+            <div class="progress-bar mt-12"><div class="progress-fill green" style="width:78%"></div></div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:3px;">78% capacity utilized</div>
+          </div>
+          <div><div class="kpi-label">Shift 2 (14:00–22:00)</div>
+            <div class="progress-bar mt-12"><div class="progress-fill blue" style="width:91%"></div></div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:3px;">91% capacity utilized</div>
+          </div>
+          <div><div class="kpi-label">Shift 3 (22:00–06:00)</div>
+            <div class="progress-bar mt-12"><div class="progress-fill yellow" style="width:64%"></div></div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:3px;">64% capacity utilized</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Changeovers Today</div></div>
+      <div class="card-body" style="padding:6px 0;">
+        <table>
+          <thead><tr><th>Press</th><th>From</th><th>To</th><th>Time</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">P-022</td><td style="font-size:11px;">Langer 23g</td><td style="font-size:11px;">Langer 52g</td><td class="mono">14:00</td></tr>
+            <tr><td class="mono">P-011</td><td style="font-size:11px;">1-110A064</td><td style="font-size:11px;">Cap Assembly</td><td class="mono">18:00</td></tr>
+            <tr><td class="mono">P-006</td><td style="font-size:11px;">Langer 35g</td><td style="font-size:11px;">Langer 23g</td><td class="mono">22:00</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Unscheduled Capacity</div></div>
+      <div class="card-body">
+        <div style="font-family:var(--mono);font-size:32px;font-weight:600;color:var(--accent);text-align:center;padding:12px 0;">148h</div>
+        <div style="font-size:11px;color:var(--text2);text-align:center;">Available press-hours next 7 days</div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--text2)">Open orders demand:</span><span class="mono">312h</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--text2)">Total capacity:</span><span class="mono">460h</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--text2)">Load factor:</span><span class="mono" style="color:var(--green)">67.8%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════ PRODUCTION ORDERS ══ -->
+<div class="page" id="page-orders">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Production Orders</div>
+    <div class="section-actions">
+      <input type="text" placeholder="Search order, part, machine…" style="width:200px;" id="order-search" oninput="filterOrders()">
+      <select style="width:130px;" id="order-status-filter" onchange="filterOrders()">
+        <option value="">All Statuses</option>
+        <option>Running</option>
+        <option>Scheduled</option>
+        <option>Complete</option>
+        <option>On Hold</option>
+      </select>
+      <button class="btn btn-primary" onclick="openModal('new-order-modal')">+ New Order</button>
+    </div>
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="kpi-card blue"><div class="kpi-label">Total Active</div><div class="kpi-value">18</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Running Now</div><div class="kpi-value">14</div></div>
+    <div class="kpi-card yellow"><div class="kpi-label">Scheduled</div><div class="kpi-value">9</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">On Hold</div><div class="kpi-value">2</div></div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Order #</th><th>Part Number</th><th>Part Name</th><th>Machine</th><th>Resin</th><th>Cavity</th>
+            <th>Cycle (s)</th><th>Target Qty</th><th>Completed</th><th>Scrap</th><th>Progress</th><th>Status</th><th>Due Date</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="orders-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════ RAW MATERIALS ══ -->
+<div class="page" id="page-materials">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Raw Materials — Inventory & Monitoring</div>
+    <div class="section-actions">
+      <button class="btn btn-ghost btn-sm">Export</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('new-material-modal')">+ Receive Material</button>
+    </div>
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="kpi-card red">
+      <div class="kpi-label">Critical / Low Stock</div>
+      <div class="kpi-value">3</div>
+      <div class="kpi-sub">Needs reorder</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Reorder Point Alert</div>
+      <div class="kpi-value">4</div>
+      <div class="kpi-sub">Within 5 days</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Materials in Stock</div>
+      <div class="kpi-value">22</div>
+      <div class="kpi-sub">Adequate supply</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Resin on Hand</div>
+      <div class="kpi-value">84k<span style="font-size:14px;color:var(--text2)">lb</span></div>
+      <div class="kpi-sub">Across 11 grades</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Resin Inventory</div>
+      <div style="display:flex;gap:6px;">
+        <span class="badge badge-red" style="cursor:pointer;">Critical</span>
+        <span class="badge badge-yellow" style="cursor:pointer;">Low</span>
+        <span class="badge badge-green" style="cursor:pointer;">OK</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Material Code</th><th>Resin Name</th><th>Grade</th><th>Supplier</th><th>On Hand (lb)</th><th>Min Stock</th><th>Reorder Pt</th><th>Daily Usage</th><th>Days Remaining</th><th>$/lb</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="materials-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid-2 mt-12">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Consumption Trend — 7 Days</div></div>
+      <div class="card-body">
+        <svg width="100%" height="140" id="consumption-chart"></svg>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Pending Purchase Orders</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>PO #</th><th>Resin</th><th>Qty (lb)</th><th>Supplier</th><th>Expected</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">PO-0441</td><td>VERSAFLEX 2810</td><td class="mono">5,000</td><td>Kraton</td><td class="mono">Apr 05</td><td><span class="badge badge-yellow">In Transit</span></td></tr>
+            <tr><td class="mono">PO-0442</td><td>TRITAN 1501</td><td class="mono">3,000</td><td>Eastman</td><td class="mono">Apr 07</td><td><span class="badge badge-blue">Confirmed</span></td></tr>
+            <tr><td class="mono">PO-0443</td><td>Copo PP</td><td class="mono">8,000</td><td>LyondellBasell</td><td class="mono">Apr 10</td><td><span class="badge badge-gray">Pending</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════ BILL OF MATERIALS ══ -->
+<div class="page" id="page-bom">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Bill of Materials</div>
+    <div class="section-actions">
+      <input type="text" placeholder="Search part or BOM…" style="width:180px;">
+      <button class="btn btn-primary btn-sm" onclick="openModal('new-bom-modal')">+ New BOM</button>
+    </div>
+  </div>
+
+  <div class="grid-1-2">
+    <div>
+      <div class="card mb-12">
+        <div class="card-header"><div class="card-title">Parts List</div></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Part #</th><th>Description</th><th>Rev</th></tr></thead>
+            <tbody id="bom-parts-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card mb-12">
+        <div class="card-header">
+          <div>
+            <div class="card-title" id="bom-detail-title">Select a Part</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;" id="bom-detail-sub"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm">Edit BOM</button>
+        </div>
+        <div class="tabs" style="margin:0 14px;">
+          <button class="tab-btn active" onclick="switchBomTab('materials')">Materials</button>
+          <button class="tab-btn" onclick="switchBomTab('resources')">Resources & Machinery</button>
+          <button class="tab-btn" onclick="switchBomTab('routing')">Routing</button>
+        </div>
+        <div class="card-body" style="padding-top:0;">
+          <div class="tab-panel active" id="bom-tab-materials">
+            <table id="bom-materials-table">
+              <thead><tr><th>Material</th><th>Qty/Part (g)</th><th>Scrap %</th><th>Unit Cost</th><th>Total $/1000</th></tr></thead>
+              <tbody id="bom-materials-body"></tbody>
+            </table>
+          </div>
+          <div class="tab-panel" id="bom-tab-resources">
+            <table>
+              <thead><tr><th>Resource</th><th>Type</th><th>Assigned</th><th>Rate/hr</th><th>Est. Hours</th></tr></thead>
+              <tbody id="bom-resources-body"></tbody>
+            </table>
+          </div>
+          <div class="tab-panel" id="bom-tab-routing">
+            <table>
+              <thead><tr><th>Step</th><th>Operation</th><th>Work Center</th><th>Cycle (s)</th><th>Setup (min)</th></tr></thead>
+              <tbody id="bom-routing-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ QUALITY ══ -->
+<div class="page" id="page-quality">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Quality Control</div>
+    <div class="section-actions">
+      <button class="btn btn-primary btn-sm" onclick="openModal('new-defect-modal')">+ Log Defect</button>
+    </div>
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="kpi-card green">
+      <div class="kpi-label">First Pass Yield</div>
+      <div class="kpi-value">98.2<span style="font-size:14px;color:var(--text2)">%</span></div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Scrap This Shift</div>
+      <div class="kpi-value">1,842</div>
+      <div class="kpi-sub">parts rejected</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Open NCRs</div>
+      <div class="kpi-value">4</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Pending Inspections</div>
+      <div class="kpi-value">7</div>
+    </div>
+  </div>
+
+  <div class="grid-2 mb-12">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Defect Pareto — This Week</div></div>
+      <div class="card-body">
+        <div id="defect-pareto"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Scrap by Machine — Today</div></div>
+      <div class="card-body">
+        <div id="scrap-by-machine"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Non-Conformance Reports (NCR)</div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>NCR #</th><th>Part</th><th>Machine</th><th>Defect Type</th><th>Qty Affected</th><th>Disposition</th><th>Opened</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">NCR-0218</td><td>Langer 52g</td><td class="mono">P-009</td><td>Flash / Burr</td><td class="mono">340</td><td><span class="badge badge-yellow">Rework</span></td><td class="mono">Apr 02</td><td><span class="badge badge-yellow">Open</span></td>
+          </tr>
+          <tr>
+            <td class="mono">NCR-0217</td><td>1-110A064</td><td class="mono">P-017</td><td>Short Shot</td><td class="mono">120</td><td><span class="badge badge-red">Scrap</span></td><td class="mono">Apr 01</td><td><span class="badge badge-yellow">Open</span></td>
+          </tr>
+          <tr>
+            <td class="mono">NCR-0216</td><td>Langer 23g</td><td class="mono">P-004</td><td>Sink Marks</td><td class="mono">67</td><td><span class="badge badge-green">Accepted</span></td><td class="mono">Mar 31</td><td><span class="badge badge-green">Closed</span></td>
+          </tr>
+          <tr>
+            <td class="mono">NCR-0215</td><td>Cap Assembly</td><td class="mono">P-026</td><td>Color deviation</td><td class="mono">500</td><td><span class="badge badge-yellow">Rework</span></td><td class="mono">Mar 30</td><td><span class="badge badge-yellow">Open</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════ MOLD TRACKING ══ -->
+<div class="page" id="page-molds">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Mold Tracking</div>
+    <div class="section-actions">
+      <button class="btn btn-primary btn-sm" onclick="openModal('new-mold-modal')">+ Add Mold</button>
+    </div>
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="kpi-card green"><div class="kpi-label">Active Molds</div><div class="kpi-value">26</div></div>
+    <div class="kpi-card yellow"><div class="kpi-label">In PM / Repair</div><div class="kpi-value">3</div></div>
+    <div class="kpi-card red"><div class="kpi-label">EOL / Retired</div><div class="kpi-value">2</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">PM Due This Week</div><div class="kpi-value">4</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Mold Registry</div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Mold ID</th><th>Part</th><th>Cavities</th><th>Material</th><th>Current Press</th><th>Total Shots</th><th>PM Interval</th><th>Last PM</th><th>Next PM</th><th>Condition</th><th>Status</th></tr></thead>
+        <tbody id="mold-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ MAINTENANCE ══ -->
+<div class="page" id="page-maintenance">
+<div class="page-content">
+
+  <div class="section-header">
+    <div class="section-title">Maintenance Management</div>
+    <div class="section-actions">
+      <button class="btn btn-primary btn-sm" onclick="openModal('new-wo-modal')">+ Work Order</button>
+    </div>
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="kpi-card red"><div class="kpi-label">Open Work Orders</div><div class="kpi-value">7</div></div>
+    <div class="kpi-card yellow"><div class="kpi-label">Overdue PM</div><div class="kpi-value">2</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Completed This Week</div><div class="kpi-value">11</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">MTTR (hrs)</div><div class="kpi-value">2.4</div></div>
+  </div>
+
+  <div class="grid-2 mb-12">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Open Work Orders</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>WO #</th><th>Machine</th><th>Type</th><th>Priority</th><th>Description</th><th>Assigned</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">WO-0341</td><td class="mono">P-014</td><td>Corrective</td><td><span class="badge badge-red">Critical</span></td><td>Clamp cylinder seal replacement</td><td>J. Torres</td><td><span class="badge badge-red">In Progress</span></td></tr>
+            <tr><td class="mono">WO-0342</td><td class="mono">P-003</td><td>Preventive</td><td><span class="badge badge-yellow">Medium</span></td><td>500-hr lube & filter service</td><td>M. Kim</td><td><span class="badge badge-yellow">Scheduled</span></td></tr>
+            <tr><td class="mono">WO-0343</td><td class="mono">P-021</td><td>Corrective</td><td><span class="badge badge-orange">High</span></td><td>Hopper heater band failure</td><td>J. Torres</td><td><span class="badge badge-yellow">Pending Parts</span></td></tr>
+            <tr><td class="mono">WO-0344</td><td class="mono">P-008</td><td>Preventive</td><td><span class="badge badge-gray">Low</span></td><td>Injection unit calibration</td><td>Unassigned</td><td><span class="badge badge-gray">Open</span></td></tr>
+            <tr><td class="mono">WO-0345</td><td class="mono">P-027</td><td>Corrective</td><td><span class="badge badge-orange">High</span></td><td>Screw wear — excessive cycle variation</td><td>Unassigned</td><td><span class="badge badge-gray">Open</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">PM Schedule — Next 14 Days</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Machine</th><th>PM Type</th><th>Due Date</th><th>Est. Hrs</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">P-003</td><td>500-hr Service</td><td class="mono">Apr 03</td><td class="mono">4h</td><td><span class="badge badge-red">Overdue</span></td></tr>
+            <tr><td class="mono">P-011</td><td>Oil Analysis</td><td class="mono">Apr 05</td><td class="mono">1h</td><td><span class="badge badge-yellow">Due Soon</span></td></tr>
+            <tr><td class="mono">P-017</td><td>1000-hr Service</td><td class="mono">Apr 06</td><td class="mono">8h</td><td><span class="badge badge-yellow">Due Soon</span></td></tr>
+            <tr><td class="mono">P-025</td><td>Filter Change</td><td class="mono">Apr 08</td><td class="mono">0.5h</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+            <tr><td class="mono">P-002</td><td>Barrel Inspection</td><td class="mono">Apr 11</td><td class="mono">2h</td><td><span class="badge badge-gray">Upcoming</span></td></tr>
+            <tr><td class="mono">P-019</td><td>500-hr Service</td><td class="mono">Apr 14</td><td class="mono">4h</td><td><span class="badge badge-gray">Upcoming</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Spare Parts Inventory</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Part Name</th><th>Part #</th><th>On Hand</th><th>Min</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Clamp Cylinder Seal Kit</td><td class="mono">SK-CLM-001</td><td class="mono">2</td><td class="mono">3</td><td><span class="badge badge-red">Low</span></td></tr>
+            <tr><td>Heater Bands 30mm</td><td class="mono">HB-030-STD</td><td class="mono">8</td><td class="mono">4</td><td><span class="badge badge-green">OK</span></td></tr>
+            <tr><td>Hydraulic Filter (10µ)</td><td class="mono">HF-010-UN</td><td class="mono">12</td><td class="mono">6</td><td><span class="badge badge-green">OK</span></td></tr>
+            <tr><td>Check Ring Assembly</td><td class="mono">CR-ASM-STD</td><td class="mono">1</td><td class="mono">2</td><td><span class="badge badge-red">Low</span></td></tr>
+            <tr><td>Thermocouple K-type</td><td class="mono">TC-K-6IN</td><td class="mono">15</td><td class="mono">5</td><td><span class="badge badge-green">OK</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Downtime by Cause — This Month</div></div>
+      <div class="card-body">
+        <div id="downtime-pareto"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</div><!-- end .main -->
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<!-- New Order Modal -->
+<div class="modal-overlay" id="new-order-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Create Production Order</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('new-order-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Part Number</div><select id="modal-part"><option>Langer 23g — LP-023</option><option>Langer 35g — LP-035</option><option>Langer 52g — LP-052</option><option>1-110A064</option><option>Cap Assembly</option></select></div>
+        <div class="form-group"><div class="form-label">Target Qty</div><input type="number" placeholder="e.g. 50000" id="modal-qty"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Assign Press</div><select id="modal-press"><option>P-001 — Haitian MA3200</option><option>P-002 — Milacron Magna</option><option>P-004 — Engel e-motion</option><option>P-008 — Husky HyPET</option><option>P-015 — Arburg 520A</option></select></div>
+        <div class="form-group"><div class="form-label">Resin</div><select id="modal-resin"><option>VERSAFLEX 2810</option><option>TRITAN 1501</option><option>PPLM</option><option>INEOS PP</option><option>Clarified PP</option><option>Copo PP</option><option>Homo PP</option><option>SAN</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Start Date</div><input type="date" id="modal-start"></div>
+        <div class="form-group"><div class="form-label">Due Date</div><input type="date" id="modal-due"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Shift</div><select><option>Shift 1 (06:00–14:00)</option><option>Shift 2 (14:00–22:00)</option><option>Shift 3 (22:00–06:00)</option></select></div>
+        <div class="form-group"><div class="form-label">Priority</div><select><option>Normal</option><option>High</option><option>Critical</option></select></div>
+      </div>
+      <div class="form-group"><div class="form-label">Notes</div><textarea rows="2" placeholder="Process notes, customer info…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-order-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createOrder()">Create Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Receive Material Modal -->
+<div class="modal-overlay" id="new-material-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Receive Raw Material</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('new-material-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Resin Grade</div><select><option>VERSAFLEX 2810</option><option>TRITAN 1501</option><option>PPLM</option><option>INEOS PP</option><option>Clarified PP</option><option>Copo PP</option><option>SAN</option></select></div>
+        <div class="form-group"><div class="form-label">Qty Received (lb)</div><input type="number" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Lot / Batch #</div><input type="text" placeholder="LOT-XXXXXX"></div>
+        <div class="form-group"><div class="form-label">Supplier</div><input type="text"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">PO Reference</div><input type="text" placeholder="PO-XXXX"></div>
+        <div class="form-group"><div class="form-label">Date Received</div><input type="date"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-material-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('Material received and inventory updated.', 'success');closeModal('new-material-modal')">Receive</button>
+    </div>
+  </div>
+</div>
+
+<!-- New BOM Modal -->
+<div class="modal-overlay" id="new-bom-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Create Bill of Materials</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('new-bom-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Part Number</div><input type="text" placeholder="e.g. LP-023"></div>
+        <div class="form-group"><div class="form-label">Part Description</div><input type="text"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Revision</div><input type="text" placeholder="Rev A"></div>
+        <div class="form-group"><div class="form-label">Unit of Measure</div><select><option>EA</option><option>1000 EA</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Primary Resin</div><select><option>VERSAFLEX 2810</option><option>TRITAN 1501</option><option>Copo PP</option></select></div>
+        <div class="form-group"><div class="form-label">Shot Weight (g)</div><input type="number"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-bom-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('BOM created successfully.','success');closeModal('new-bom-modal')">Save BOM</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Defect Modal -->
+<div class="modal-overlay" id="new-defect-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Log Defect / NCR</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('new-defect-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Machine</div><select><option>P-009</option><option>P-004</option><option>P-017</option></select></div>
+        <div class="form-group"><div class="form-label">Part</div><select><option>Langer 52g</option><option>1-110A064</option><option>Langer 23g</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Defect Type</div><select><option>Flash / Burr</option><option>Short Shot</option><option>Sink Marks</option><option>Warpage</option><option>Color Deviation</option><option>Dimensional OOT</option></select></div>
+        <div class="form-group"><div class="form-label">Quantity Affected</div><input type="number"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Disposition</div><select><option>Scrap</option><option>Rework</option><option>Use As-Is</option><option>Quarantine</option></select></div>
+        <div class="form-group"><div class="form-label">Root Cause (Initial)</div><select><option>Process Parameter</option><option>Material Issue</option><option>Tooling/Mold</option><option>Operator</option><option>Unknown</option></select></div>
+      </div>
+      <div class="form-group"><div class="form-label">Notes</div><textarea rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-defect-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('NCR logged.','success');closeModal('new-defect-modal')">Log NCR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════ DATA ═══════════════════════════════
+
+const MACHINES = [
+  { id:'P-001', name:'Haitian MA3200', ton:320, status:'running', oee:82, part:'Langer 35g', resin:'Copo PP' },
+  { id:'P-002', name:'Milacron Magna', ton:500, status:'running', oee:79, part:'Langer 52g', resin:'TRITAN 1501' },
+  { id:'P-003', name:'LS LH1000', ton:100, status:'idle', oee:0, part:'—', resin:'—' },
+  { id:'P-004', name:'Engel e-motion', ton:200, status:'running', oee:91, part:'Langer 23g', resin:'VERSAFLEX 2810' },
+  { id:'P-005', name:'Milacron VH280', ton:280, status:'running', oee:74, part:'1-110A064', resin:'SAN' },
+  { id:'P-006', name:'Haitian MA5500', ton:550, status:'running', oee:85, part:'Cap Assembly', resin:'Homo PP' },
+  { id:'P-007', name:'Arburg 470A', ton:150, status:'running', oee:88, part:'Langer 23g', resin:'Clarified PP' },
+  { id:'P-008', name:'Husky HyPET', ton:400, status:'running', oee:93, part:'Langer 35g', resin:'TRITAN 1501' },
+  { id:'P-009', name:'Engel Victory', ton:300, status:'running', oee:77, part:'Langer 52g', resin:'PPLM' },
+  { id:'P-010', name:'LS LH2000', ton:200, status:'running', oee:80, part:'1-110A064', resin:'SAN' },
+  { id:'P-011', name:'Milacron T-300', ton:300, status:'running', oee:76, part:'Langer 35g', resin:'Copo PP' },
+  { id:'P-012', name:'Haitian MA1800', ton:180, status:'running', oee:83, part:'Langer 23g', resin:'VERSAFLEX 2810' },
+  { id:'P-013', name:'Arburg 520A', ton:200, status:'running', oee:87, part:'Cap Assembly', resin:'Clarified PP' },
+  { id:'P-014', name:'Engel duo', ton:650, status:'down', oee:0, part:'—', resin:'—' },
+  { id:'P-015', name:'Husky Ultra', ton:350, status:'running', oee:90, part:'Langer 35g', resin:'INEOS PP' },
+  { id:'P-016', name:'LS LH650', ton:65, status:'running', oee:71, part:'Langer 23g', resin:'VERSAFLEX 2810' },
+  { id:'P-017', name:'Milacron Magna2', ton:480, status:'running', oee:84, part:'1-110A064', resin:'SAN' },
+  { id:'P-018', name:'Haitian JU680', ton:680, status:'running', oee:78, part:'Langer 52g', resin:'Homo PP' },
+  { id:'P-019', name:'Engel e-max', ton:260, status:'running', oee:82, part:'Langer 23g', resin:'Clarified PP' },
+  { id:'P-020', name:'Arburg 375V', ton:125, status:'running', oee:86, part:'Cap Assembly', resin:'Copo PP' },
+  { id:'P-021', name:'LS LH380', ton:38, status:'running', oee:69, part:'Langer 23g', resin:'VERSAFLEX 2810' },
+  { id:'P-022', name:'Husky Quadloc', ton:500, status:'setup', oee:0, part:'—', resin:'—' },
+  { id:'P-023', name:'Milacron Roboshot', ton:165, status:'running', oee:94, part:'Langer 35g', resin:'TRITAN 1501' },
+  { id:'P-024', name:'Haitian MA2700', ton:270, status:'running', oee:81, part:'1-110A064', resin:'SAN' },
+  { id:'P-025', name:'Engel insert', ton:200, status:'running', oee:73, part:'Langer 52g', resin:'PPLM' },
+  { id:'P-026', name:'Arburg 630S', ton:250, status:'running', oee:88, part:'Cap Assembly', resin:'Homo PP' },
+  { id:'P-027', name:'LS LH1500', ton:150, status:'running', oee:79, part:'Langer 23g', resin:'INEOS PP' },
+  { id:'P-028', name:'Milacron VH450', ton:450, status:'running', oee:85, part:'Langer 35g', resin:'Clarified PP' },
+  { id:'P-029', name:'Haitian MA9000', ton:900, status:'running', oee:76, part:'Langer 52g', resin:'TRITAN 1501' },
+  { id:'P-030', name:'Husky Altanium', ton:375, status:'running', oee:89, part:'1-110A064', resin:'SAN' },
+];
+
+const MATERIALS = [
+  { code:'MAT-001', name:'VERSAFLEX 2810', grade:'TPE', supplier:'Kraton', onHand:1200, min:2000, reorder:3500, dailyUsage:800, pricePer:1.82 },
+  { code:'MAT-002', name:'TRITAN 1501', grade:'Copolyester', supplier:'Eastman', onHand:4800, min:1500, reorder:3000, dailyUsage:600, pricePer:2.45 },
+  { code:'MAT-003', name:'PPLM', grade:'PP', supplier:'LyondellBasell', onHand:9200, min:2000, reorder:5000, dailyUsage:1100, pricePer:0.88 },
+  { code:'MAT-004', name:'INEOS PP', grade:'PP Homo', supplier:'INEOS', onHand:6500, min:2000, reorder:4000, dailyUsage:900, pricePer:0.91 },
+  { code:'MAT-005', name:'Clarified PP', grade:'PP Clarified', supplier:'Braskem', onHand:11000, min:3000, reorder:6000, dailyUsage:1400, pricePer:0.95 },
+  { code:'MAT-006', name:'Copo PP', grade:'PP Copo', supplier:'LyondellBasell', onHand:7800, min:2500, reorder:5000, dailyUsage:1200, pricePer:0.89 },
+  { code:'MAT-007', name:'Homo PP', grade:'PP Homo', supplier:'ExxonMobil', onHand:5200, min:2000, reorder:4500, dailyUsage:800, pricePer:0.87 },
+  { code:'MAT-008', name:'SAN', grade:'SAN', supplier:'Ineos Styrolution', onHand:3100, min:1000, reorder:2500, dailyUsage:500, pricePer:1.42 },
+  { code:'MAT-009', name:'Colorant Black MB', grade:'MB', supplier:'PolyOne', onHand:800, min:200, reorder:400, dailyUsage:80, pricePer:3.20 },
+  { code:'MAT-010', name:'UV Stabilizer MB', grade:'MB', supplier:'Clariant', onHand:600, min:150, reorder:300, dailyUsage:60, pricePer:4.10 },
+  { code:'MAT-011', name:'Mold Release Agent', grade:'Spray', supplier:'Henkel', onHand:45, min:10, reorder:20, dailyUsage:5, pricePer:22.0 },
+];
+
+const ORDERS = [
+  { id:'PO-2401', part:'LP-023', partName:'Langer 23g Lid', machine:'P-004', resin:'VERSAFLEX 2810', cavity:8, cycle:18, target:80000, completed:41200, scrap:740, status:'Running', due:'Apr 05' },
+  { id:'PO-2402', part:'LP-035', partName:'Langer 35g Body', machine:'P-008', resin:'TRITAN 1501', cavity:4, cycle:24, target:40000, completed:38900, scrap:310, status:'Running', due:'Apr 04' },
+  { id:'PO-2403', part:'LP-052', partName:'Langer 52g Cap', machine:'P-002', resin:'TRITAN 1501', cavity:4, cycle:28, target:50000, completed:12000, scrap:250, status:'Running', due:'Apr 10' },
+  { id:'PO-2404', part:'1-110A064', partName:'Closure Base', machine:'P-017', resin:'SAN', cavity:16, cycle:14, target:200000, completed:88000, scrap:1200, status:'Running', due:'Apr 08' },
+  { id:'PO-2405', part:'CAP-ASM', partName:'Cap Assembly', machine:'P-026', resin:'Homo PP', cavity:8, cycle:20, target:60000, completed:55000, scrap:890, status:'Running', due:'Apr 04' },
+  { id:'PO-2406', part:'LP-023', partName:'Langer 23g Lid', machine:'P-016', resin:'VERSAFLEX 2810', cavity:8, cycle:18, target:100000, completed:0, scrap:0, status:'Scheduled', due:'Apr 07' },
+  { id:'PO-2407', part:'LP-052', partName:'Langer 52g Cap', machine:'P-018', resin:'Homo PP', cavity:4, cycle:30, target:30000, completed:30000, scrap:420, status:'Complete', due:'Apr 03' },
+  { id:'PO-2408', part:'1-110A064', partName:'Closure Base', machine:'P-030', resin:'SAN', cavity:16, cycle:14, target:150000, completed:12000, scrap:800, status:'Running', due:'Apr 12' },
+  { id:'PO-2409', part:'LP-035', partName:'Langer 35g Body', machine:'P-023', resin:'TRITAN 1501', cavity:4, cycle:24, target:20000, completed:0, scrap:0, status:'On Hold', due:'Apr 15' },
+];
+
+const MOLDS = [
+  { id:'M-001', part:'LP-023', cavities:8, material:'P20', press:'P-004', shots:2400000, pmInterval:500000, lastPM:'Feb 15', nextPM:'May 15', condition:'Good', status:'Active' },
+  { id:'M-002', part:'LP-035', cavities:4, material:'H13', press:'P-008', shots:1800000, pmInterval:250000, lastPM:'Mar 01', nextPM:'Apr 15', condition:'Fair', status:'Active' },
+  { id:'M-003', part:'LP-052', cavities:4, material:'P20', press:'P-002', shots:950000, pmInterval:500000, lastPM:'Jan 20', nextPM:'Jul 20', condition:'Good', status:'Active' },
+  { id:'M-004', part:'1-110A064', cavities:16, material:'H13', press:'P-017', shots:8200000, pmInterval:1000000, lastPM:'Mar 10', nextPM:'Nov 10', condition:'Good', status:'Active' },
+  { id:'M-005', part:'CAP-ASM', cavities:8, material:'S7', press:'P-026', shots:3100000, pmInterval:500000, lastPM:'Feb 28', nextPM:'Jun 01', condition:'Good', status:'Active' },
+  { id:'M-006', part:'LP-023', cavities:8, material:'P20', press:'—', shots:4800000, pmInterval:500000, lastPM:'Mar 20', nextPM:'Apr 08', condition:'Needs PM', status:'In Repair' },
+];
+
+const BOM_PARTS = [
+  { id:'LP-023', name:'Langer 23g Lid', rev:'Rev D' },
+  { id:'LP-035', name:'Langer 35g Body', rev:'Rev C' },
+  { id:'LP-052', name:'Langer 52g Cap', rev:'Rev B' },
+  { id:'1-110A064', name:'Closure Base 110mm', rev:'Rev F' },
+  { id:'CAP-ASM', name:'Cap Assembly', rev:'Rev A' },
+];
+
+const BOM_DATA = {
+  'LP-023': {
+    materials: [
+      { mat:'VERSAFLEX 2810', qty:23.4, scrap:2.1, unitCost:1.82 },
+      { mat:'Colorant Black MB', qty:0.7, scrap:0, unitCost:3.20 },
+    ],
+    resources: [
+      { res:'P-004 Engel e-motion', type:'Press', assigned:'P-004', rate:45, hours:0.005 },
+      { res:'8-Cav Mold M-001', type:'Tooling', assigned:'M-001', rate:12, hours:0.005 },
+    ],
+    routing: [
+      { step:1, op:'Injection Molding', wc:'Press Cell 4', cycle:18, setup:30 },
+      { step:2, op:'Visual Inspection', wc:'QC Station', cycle:2, setup:5 },
+      { step:3, op:'Pack & Label', wc:'Pack Out', cycle:3, setup:10 },
+    ]
+  }
+};
+
+let selectedBomPart = null;
+let currentOrders = [...ORDERS];
+
+// ═══════════════════════════════ NAVIGATION ═══════════════════════════════
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+}
+
+// ═══════════════════════════════ MODAL ═══════════════════════════════
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ═══════════════════════════════ TOAST ═══════════════════════════════
+
+function showToast(msg, type='success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type === 'success' ? '✓' : type === 'warning' ? '⚠' : '✕'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ═══════════════════════════════ CLOCK ═══════════════════════════════
+
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  document.getElementById('clock').textContent =
+    `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const shift = h >= 6 && h < 14 ? 'SHIFT 1' : h >= 14 && h < 22 ? 'SHIFT 2' : 'SHIFT 3';
+  document.getElementById('shift-label').textContent = shift;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ═══════════════════════════════ DATE ═══════════════════════════════
+document.getElementById('schedule-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+
+// ═══════════════════════════════ MACHINES ═══════════════════════════════
+
+function renderMachines() {
+  const grid = document.getElementById('machine-grid');
+  const oeeColor = (v) => v >= 85 ? 'var(--green)' : v >= 70 ? 'var(--yellow)' : 'var(--red)';
+  grid.innerHTML = MACHINES.map(m => `
+    <div class="machine-tile ${m.status}" onclick="showToast('${m.id}: ${m.name} — ${m.oee}% OEE','success')">
+      <div class="machine-id">${m.id}</div>
+      <div class="machine-name">${m.name}</div>
+      <div class="machine-part">${m.part}</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+        <div>
+          <div class="machine-oee" style="color:${m.status === 'running' ? oeeColor(m.oee) : 'var(--text3)'}">
+            ${m.status === 'running' ? m.oee + '%' : m.status.toUpperCase()}
+          </div>
+          <div class="machine-efficiency">${m.ton}T • ${m.resin !== '—' ? m.resin.split(' ')[0] : '—'}</div>
+        </div>
+        <span class="sdot sdot-${m.status === 'running' ? 'green' : m.status === 'down' ? 'red' : m.status === 'setup' ? 'yellow' : 'gray'}"></span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// OEE Bars
+function renderOeeBars() {
+  const cont = document.getElementById('oee-bars');
+  const running = MACHINES.filter(m => m.status === 'running').sort((a,b) => b.oee - a.oee).slice(0,10);
+  cont.innerHTML = running.map(m => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text2);width:38px;">${m.id}</div>
+      <div style="flex:1;">
+        <div class="progress-bar">
+          <div class="progress-fill ${m.oee >= 85 ? 'green' : m.oee >= 70 ? 'yellow' : 'red'}" style="width:${m.oee}%"></div>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text);width:30px;text-align:right;">${m.oee}%</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════ ORDERS ═══════════════════════════════
+
+function renderOrders(orders) {
+  const tbody = document.getElementById('orders-table-body');
+  tbody.innerHTML = orders.map(o => {
+    const pct = Math.round((o.completed / o.target) * 100);
+    const color = o.status === 'Running' ? 'blue' : o.status === 'Complete' ? 'green' : o.status === 'On Hold' ? 'orange' : 'yellow';
+    const badgeClass = o.status === 'Running' ? 'badge-blue' : o.status === 'Complete' ? 'badge-green' : o.status === 'On Hold' ? 'badge-orange' : 'badge-yellow';
+    return `<tr>
+      <td class="mono">${o.id}</td>
+      <td class="mono">${o.part}</td>
+      <td style="font-size:11px;">${o.partName}</td>
+      <td class="mono">${o.machine}</td>
+      <td style="font-size:11px;">${o.resin}</td>
+      <td class="mono">${o.cavity}</td>
+      <td class="mono">${o.cycle}s</td>
+      <td class="mono">${o.target.toLocaleString()}</td>
+      <td class="mono">${o.completed.toLocaleString()}</td>
+      <td class="mono" style="color:var(--red)">${o.scrap.toLocaleString()}</td>
+      <td style="width:100px;">
+        <div class="progress-bar"><div class="progress-fill ${color}" style="width:${Math.min(pct,100)}%"></div></div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text2);margin-top:2px;">${pct}%</div>
+      </td>
+      <td><span class="badge ${badgeClass}">${o.status}</span></td>
+      <td class="mono">${o.due}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="showToast('Viewing order ${o.id}','success')">View</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterOrders() {
+  const search = document.getElementById('order-search').value.toLowerCase();
+  const status = document.getElementById('order-status-filter').value;
+  const filtered = ORDERS.filter(o => {
+    const matchSearch = !search || [o.id, o.part, o.partName, o.machine].some(v => v.toLowerCase().includes(search));
+    const matchStatus = !status || o.status === status;
+    return matchSearch && matchStatus;
+  });
+  renderOrders(filtered);
+}
+
+// Dashboard orders (top 6)
+function renderDashboardOrders() {
+  const tbody = document.getElementById('dashboard-orders-body');
+  const running = ORDERS.filter(o => o.status === 'Running').slice(0,6);
+  tbody.innerHTML = running.map(o => {
+    const pct = Math.round((o.completed / o.target) * 100);
+    const etc = Math.round(((o.target - o.completed) / o.cavity) * o.cycle / 3600);
+    return `<tr>
+      <td class="mono">${o.id}</td>
+      <td style="font-size:11px;">${o.partName}</td>
+      <td class="mono">${o.machine}</td>
+      <td style="font-size:11px;">${o.resin}</td>
+      <td class="mono">${o.target.toLocaleString()}</td>
+      <td class="mono">${o.completed.toLocaleString()}</td>
+      <td style="width:80px;"><div class="progress-bar"><div class="progress-fill blue" style="width:${pct}%"></div></div><div style="font-family:var(--mono);font-size:9px;color:var(--text2);margin-top:1px;">${pct}%</div></td>
+      <td><span class="badge badge-blue">Running</span></td>
+      <td class="mono" style="color:var(--text2)">~${etc}h</td>
+    </tr>`;
+  }).join('');
+}
+
+function createOrder() {
+  const part = document.getElementById('modal-part').value;
+  const qty = parseInt(document.getElementById('modal-qty').value) || 10000;
+  const press = document.getElementById('modal-press').value.split(' ')[0];
+  const newOrder = {
+    id: 'PO-' + (2410 + ORDERS.length),
+    part: 'LP-NEW', partName: part.split('—')[0].trim(),
+    machine: press, resin: document.getElementById('modal-resin').value,
+    cavity: 4, cycle: 20, target: qty, completed: 0, scrap: 0,
+    status: 'Scheduled', due: document.getElementById('modal-due').value || 'TBD'
+  };
+  ORDERS.unshift(newOrder);
+  renderOrders(ORDERS);
+  renderDashboardOrders();
+  closeModal('new-order-modal');
+  showToast(`Order ${newOrder.id} created and scheduled.`, 'success');
+}
+
+// ═══════════════════════════════ MATERIALS ═══════════════════════════════
+
+function renderMaterials() {
+  const tbody = document.getElementById('materials-table-body');
+  tbody.innerHTML = MATERIALS.map(m => {
+    const days = Math.round(m.onHand / m.dailyUsage);
+    const pct = Math.round((m.onHand / m.reorder) * 100);
+    const status = m.onHand <= m.min ? 'CRITICAL' : m.onHand <= m.reorder ? 'LOW' : 'OK';
+    const badgeClass = status === 'CRITICAL' ? 'badge-red' : status === 'LOW' ? 'badge-yellow' : 'badge-green';
+    return `<tr>
+      <td class="mono">${m.code}</td>
+      <td style="font-weight:500;">${m.name}</td>
+      <td><span class="badge badge-gray">${m.grade}</span></td>
+      <td style="font-size:11px;">${m.supplier}</td>
+      <td class="mono">${m.onHand.toLocaleString()}</td>
+      <td class="mono" style="color:var(--text2)">${m.min.toLocaleString()}</td>
+      <td class="mono" style="color:var(--text2)">${m.reorder.toLocaleString()}</td>
+      <td class="mono">${m.dailyUsage.toLocaleString()}</td>
+      <td class="mono" style="color:${days <= 3 ? 'var(--red)' : days <= 7 ? 'var(--yellow)' : 'var(--green)'}">${days}d</td>
+      <td class="mono">$${m.pricePer.toFixed(2)}</td>
+      <td><span class="badge ${badgeClass}">${status}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Reorder triggered for ${m.name}','success')">Reorder</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Mini list for dashboard
+  const mini = document.getElementById('material-mini-list');
+  const critical = MATERIALS.filter(m => m.onHand <= m.reorder).slice(0,5);
+  mini.innerHTML = critical.map(m => {
+    const pct = Math.min(Math.round((m.onHand / m.reorder) * 100), 100);
+    const status = m.onHand <= m.min ? 'CRITICAL' : 'LOW';
+    const color = m.onHand <= m.min ? 'red' : 'yellow';
+    return `<div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:500;">${m.name}</span>
+        <span class="badge badge-${color}">${status}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${color}" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text2);margin-top:2px;">
+        <span>${m.onHand.toLocaleString()} lb on hand</span>
+        <span>${Math.round(m.onHand/m.dailyUsage)}d remaining</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════ BOM ═══════════════════════════════
+
+function renderBomPartsList() {
+  const tbody = document.getElementById('bom-parts-list');
+  tbody.innerHTML = BOM_PARTS.map(p => `
+    <tr style="cursor:pointer;" onclick="selectBomPart('${p.id}')">
+      <td class="mono" style="color:var(--accent)">${p.id}</td>
+      <td style="font-size:11px;">${p.name}</td>
+      <td style="font-size:10px;color:var(--text2);">${p.rev}</td>
+    </tr>
+  `).join('');
+}
+
+function selectBomPart(id) {
+  selectedBomPart = id;
+  const part = BOM_PARTS.find(p => p.id === id);
+  document.getElementById('bom-detail-title').textContent = `BOM: ${part.name}`;
+  document.getElementById('bom-detail-sub').textContent = `${part.id} — ${part.rev}`;
+  const data = BOM_DATA[id];
+  if (!data) return;
+  const matBody = document.getElementById('bom-materials-body');
+  matBody.innerHTML = data.materials.map(m => {
+    const totalPer1k = ((m.qty * (1 + m.scrap/100)) / 1000) * m.unitCost;
+    return `<tr>
+      <td style="font-weight:500;">${m.mat}</td>
+      <td class="mono">${m.qty}g</td>
+      <td class="mono">${m.scrap}%</td>
+      <td class="mono">$${m.unitCost.toFixed(2)}/lb</td>
+      <td class="mono">$${(totalPer1k * 453.592).toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+  const resBody = document.getElementById('bom-resources-body');
+  resBody.innerHTML = data.resources.map(r => `
+    <tr>
+      <td style="font-size:11px;">${r.res}</td>
+      <td><span class="badge badge-gray">${r.type}</span></td>
+      <td class="mono">${r.assigned}</td>
+      <td class="mono">$${r.rate}/hr</td>
+      <td class="mono">${r.hours}h</td>
+    </tr>
+  `).join('');
+  const routeBody = document.getElementById('bom-routing-body');
+  routeBody.innerHTML = data.routing.map(r => `
+    <tr>
+      <td class="mono">${r.step}</td>
+      <td style="font-size:11px;">${r.op}</td>
+      <td style="font-size:11px;">${r.wc}</td>
+      <td class="mono">${r.cycle}s</td>
+      <td class="mono">${r.setup}m</td>
+    </tr>
+  `).join('');
+}
+
+function switchBomTab(tab) {
+  document.querySelectorAll('[id^="bom-tab-"]').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tabs .tab-btn').forEach((b,i) => {
+    const tabs = ['materials','resources','routing'];
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+  document.getElementById(`bom-tab-${tab}`).classList.add('active');
+}
+
+// ═══════════════════════════════ MOLDS ═══════════════════════════════
+
+function renderMolds() {
+  const tbody = document.getElementById('mold-table-body');
+  tbody.innerHTML = MOLDS.map(m => {
+    const condColor = m.condition === 'Good' ? 'badge-green' : m.condition === 'Fair' ? 'badge-yellow' : 'badge-orange';
+    const statusBadge = m.status === 'Active' ? 'badge-green' : m.status === 'In Repair' ? 'badge-red' : 'badge-gray';
+    return `<tr>
+      <td class="mono" style="color:var(--accent)">${m.id}</td>
+      <td class="mono">${m.part}</td>
+      <td class="mono">${m.cavities}</td>
+      <td><span class="badge badge-gray">${m.material}</span></td>
+      <td class="mono">${m.press}</td>
+      <td class="mono">${(m.shots/1000000).toFixed(1)}M</td>
+      <td class="mono">${(m.pmInterval/1000).toFixed(0)}k</td>
+      <td class="mono">${m.lastPM}</td>
+      <td class="mono">${m.nextPM}</td>
+      <td><span class="badge ${condColor}">${m.condition}</span></td>
+      <td><span class="badge ${statusBadge}">${m.status}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════ ALARMS ═══════════════════════════════
+
+function renderAlarms() {
+  const alarms = [
+    { sev:'red', machine:'P-014', msg:'Clamp pressure fault — machine halted', time:'09:41' },
+    { sev:'yellow', machine:'P-021', msg:'Hopper level low — resin running out', time:'10:12' },
+    { sev:'yellow', machine:'MAT-001', msg:'VERSAFLEX 2810 below reorder point', time:'10:18' },
+    { sev:'red', machine:'P-009', msg:'Flash detected — excessive scrap rate', time:'11:02' },
+    { sev:'yellow', machine:'M-006', msg:'Mold PM overdue by 14 days', time:'11:30' },
+    { sev:'orange', machine:'P-027', msg:'Cycle time deviation >5% — check process', time:'12:05' },
+    { sev:'red', machine:'P-003', msg:'PM overdue — 500-hr service', time:'12:45' },
+  ];
+  const cont = document.getElementById('alarm-list');
+  cont.innerHTML = alarms.map(a => `
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.03);">
+      <span class="sdot sdot-${a.sev}" style="margin-top:4px;"></span>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:1px;">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--accent)">${a.machine}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">${a.time}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);">${a.msg}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════ GANTT ═══════════════════════════════
+
+function renderGantt() {
+  const cont = document.getElementById('gantt-container');
+  const hours = Array.from({length:24},(_,i) => i);
+  const blocks = [
+    { machine:'P-001', label:'LP-035 — PO-2402', start:0, len:14, color:'var(--accent)' },
+    { machine:'P-001', label:'LP-023 — PO-2406', start:14, len:10, color:'var(--green)' },
+    { machine:'P-002', label:'LP-052 — PO-2403', start:0, len:24, color:'var(--accent)' },
+    { machine:'P-004', label:'LP-023 — PO-2401', start:0, len:20, color:'var(--green)' },
+    { machine:'P-004', label:'Changeover', start:20, len:2, color:'var(--yellow)' },
+    { machine:'P-008', label:'LP-035 — PO-2402', start:0, len:16, color:'var(--accent)' },
+    { machine:'P-017', label:'1-110A064 — PO-2404', start:0, len:24, color:'var(--purple)' },
+    { machine:'P-026', label:'CAP-ASM — PO-2405', start:0, len:18, color:'var(--orange)' },
+    { machine:'P-026', label:'IDLE', start:18, len:6, color:'var(--border2)' },
+    { machine:'P-030', label:'1-110A064 — PO-2408', start:0, len:24, color:'var(--purple)' },
+  ];
+  const machines = ['P-001','P-002','P-004','P-008','P-017','P-026','P-030'];
+  let html = `<div class="gantt-header">
+    <div class="gantt-label-col">Machine</div>
+    <div class="gantt-time-cols">${hours.map(h=>`<div class="gantt-hour">${String(h).padStart(2,'0')}:00</div>`).join('')}</div>
+  </div>`;
+  machines.forEach(m => {
+    const mData = MACHINES.find(x => x.id === m);
+    const rowBlocks = blocks.filter(b => b.machine === m);
+    html += `<div class="gantt-row">
+      <div class="gantt-row-label">
+        <span class="sdot ${mData?.status === 'running' ? 'sdot-green' : 'sdot-gray'}"></span>
+        ${m}
+      </div>
+      <div class="gantt-track">
+        ${rowBlocks.map(b => `
+          <div class="gantt-block" 
+            style="left:${(b.start/24)*100}%;width:${(b.len/24)*100}%;background:${b.color}22;border:1px solid ${b.color}55;color:${b.color};"
+            title="${b.label}">
+            ${b.label}
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  });
+  cont.innerHTML = html;
+}
+
+// ═══════════════════════════════ CHARTS ═══════════════════════════════
+
+function renderShiftChart() {
+  const svg = document.getElementById('shift-chart');
+  if (!svg) return;
+  const W = svg.parentElement.offsetWidth || 400, H = 160;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const shifts = ['S1 Target','S1 Actual','S2 Target','S2 Actual','S3 Target','S3 Actual'];
+  const vals = [4200, 3850, 4200, 4100, 4200, 2800];
+  const colors = ['var(--border2)','var(--green)','var(--border2)','var(--accent)','var(--border2)','var(--yellow)'];
+  const max = 5000;
+  const bw = (W - 60) / vals.length - 8;
+  let out = '';
+  vals.forEach((v, i) => {
+    const x = 40 + i * ((W - 60) / vals.length);
+    const bh = Math.round((v / max) * (H - 40));
+    const y = H - 20 - bh;
+    out += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="2" fill="${colors[i]}" opacity="0.85"/>`;
+    out += `<text x="${x + bw/2}" y="${H-6}" text-anchor="middle" font-size="8" fill="var(--text3)">${shifts[i].replace(' ','<tspan x="'+( x+bw/2)+'" dy="1.2em">').split('<tspan')[0]}</text>`;
+    out += `<text x="${x + bw/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="var(--text2)">${(v/1000).toFixed(1)}k</text>`;
+  });
+  // baseline
+  out += `<line x1="40" y1="${H-20}" x2="${W-10}" y2="${H-20}" stroke="var(--border)" stroke-width="1"/>`;
+  svg.innerHTML = out;
+}
+
+function renderDefectPareto() {
+  const cont = document.getElementById('defect-pareto');
+  const defects = [
+    { name:'Flash / Burr', qty:1240 },
+    { name:'Short Shot', qty:820 },
+    { name:'Sink Marks', qty:430 },
+    { name:'Warpage', qty:290 },
+    { name:'Color Dev.', qty:180 },
+    { name:'Dim OOT', qty:90 },
+  ];
+  const max = defects[0].qty;
+  cont.innerHTML = defects.map(d => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-size:11px;width:90px;color:var(--text2);">${d.name}</div>
+      <div style="flex:1;">
+        <div class="progress-bar"><div class="progress-fill orange" style="width:${Math.round(d.qty/max*100)}%"></div></div>
+      </div>
+      <div class="mono" style="font-size:10px;width:40px;text-align:right;">${d.qty.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+function renderScrapByMachine() {
+  const cont = document.getElementById('scrap-by-machine');
+  const data = [
+    { m:'P-009', scrap:420 },{ m:'P-014', scrap:0 },{ m:'P-017', scrap:310 },
+    { m:'P-026', scrap:280 },{ m:'P-004', scrap:180 },{ m:'P-021', scrap:150 },
+    { m:'P-005', scrap:140 },{ m:'P-008', scrap:90 },
+  ];
+  const max = Math.max(...data.map(d => d.scrap));
+  cont.innerHTML = data.map(d => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div class="mono" style="font-size:10px;width:36px;color:var(--accent)">${d.m}</div>
+      <div style="flex:1;">
+        <div class="progress-bar"><div class="progress-fill red" style="width:${max > 0 ? Math.round(d.scrap/max*100) : 0}%"></div></div>
+      </div>
+      <div class="mono" style="font-size:10px;width:36px;text-align:right;color:${d.scrap > 300 ? 'var(--red)' : 'var(--text2)'}">${d.scrap}</div>
+    </div>
+  `).join('');
+}
+
+function renderDowntimePareto() {
+  const cont = document.getElementById('downtime-pareto');
+  if (!cont) return;
+  const data = [
+    { name:'Mechanical Fault', hrs:18.4 },
+    { name:'Scheduled PM', hrs:14.0 },
+    { name:'Mold Changeover', hrs:11.2 },
+    { name:'Process Issue', hrs:7.6 },
+    { name:'Material Jam', hrs:4.1 },
+    { name:'Operator', hrs:2.8 },
+  ];
+  const max = data[0].hrs;
+  cont.innerHTML = data.map(d => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-size:11px;width:110px;color:var(--text2);">${d.name}</div>
+      <div style="flex:1;">
+        <div class="progress-bar"><div class="progress-fill yellow" style="width:${Math.round(d.hrs/max*100)}%"></div></div>
+      </div>
+      <div class="mono" style="font-size:10px;width:36px;text-align:right;">${d.hrs}h</div>
+    </div>
+  `).join('');
+}
+
+function renderConsumptionChart() {
+  const svg = document.getElementById('consumption-chart');
+  if (!svg) return;
+  const W = svg.parentElement?.offsetWidth || 400, H = 140;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const vals = [6800, 7100, 6400, 7200, 6900, 5200, 6100];
+  const max = 8000;
+  const step = (W - 60) / (vals.length - 1);
+  const pts = vals.map((v,i) => {
+    const x = 30 + i * step;
+    const y = H - 30 - (v / max) * (H - 50);
+    return `${x},${y}`;
+  }).join(' ');
+  const apts = vals.map((v,i) => {
+    const x = 30 + i * step;
+    const y = H - 30 - (v / max) * (H - 50);
+    return `${x},${y}`;
+  });
+  let out = `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+  apts.forEach((p, i) => {
+    const [x,y] = p.split(',');
+    out += `<circle cx="${x}" cy="${y}" r="3" fill="var(--accent)"/>`;
+    out += `<text x="${x}" y="${H-10}" text-anchor="middle" font-size="8" fill="var(--text3)">${days[i]}</text>`;
+    out += `<text x="${x}" y="${parseFloat(y)-6}" text-anchor="middle" font-size="8" fill="var(--text2)">${(vals[i]/1000).toFixed(1)}k</text>`;
+  });
+  svg.innerHTML = out;
+}
+
+// ═══════════════════════════════ INIT ═══════════════════════════════
+
+window.addEventListener('load', () => {
+  renderMachines();
+  renderOeeBars();
+  renderOrders(ORDERS);
+  renderDashboardOrders();
+  renderMaterials();
+  renderBomPartsList();
+  renderMolds();
+  renderAlarms();
+  renderGantt();
+  renderDefectPareto();
+  renderScrapByMachine();
+  renderDowntimePareto();
+  setTimeout(() => {
+    renderShiftChart();
+    renderConsumptionChart();
+  }, 200);
+});
+
+window.addEventListener('resize', () => {
+  renderShiftChart();
+  renderConsumptionChart();
+});
+
+</script>
+</body>
+</html>
